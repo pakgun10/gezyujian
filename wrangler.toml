@@ -10,7 +10,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "gezyujian"
-database_id = "1d82021c-2d1a-4f3e-99e8-03a0b088a3bb"
+database_id = "ebd392f1-e684-44ed-8842-c4e6431dcae5"
 
 [vars]
 APP_NAME = "GezyUjian"
