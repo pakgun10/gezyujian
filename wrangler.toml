@@ -2,12 +2,10 @@ name = "gezyujian"
 main = "src/worker.js"
 compatibility_date = "2026-09-01"
 account_id = ""              # diisi saat `wrangler login`
-workers_dev = false
+workers_dev = true
 
-# Rute custom (setelah zona gezytech.web.id terhubung ke akun Cloudflare)
-routes = [
-  { pattern = "tes.gezytech.web.id", custom_domain = true }
-]
+# Custom domain dipasang manual via Dashboard (Workers → Settings → Domains & Routes)
+# karena zone gezytech.web.id tidak ter-infer otomatis oleh wrangler
 
 [[d1_databases]]
 binding = "DB"
