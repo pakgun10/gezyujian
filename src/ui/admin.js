@@ -103,8 +103,13 @@ window.pratinjau = async (pid)=>{
       <div style="font-size:.85rem;color:#16a34a;margin-top:.4rem">Kunci: \${s.kunci_tampil}</div>
     </div>\`).join('')}</div>\`;
   d.forEach((s,i)=>{
-    document.getElementById('t'+i).innerHTML = s.teks;
-    document.getElementById('o'+i).innerHTML = s.opsi ? s.opsi.map((o,j)=>\`<div>\${String.fromCharCode(65+j)}. \${o}</div>\`).join('') : (s.tipe==='bs'?'Benar / Salah':'');
+    // textContent dulu, baru auto-render KaTeX — mencegah duplikasi/teks mentah
+    document.getElementById('t'+i).textContent = s.teks;
+    document.getElementById('o'+i).textContent = s.opsi ? '' : (s.tipe==='bs'?'':'');
+    if(s.opsi) document.getElementById('o'+i).innerHTML = s.opsi.map((o,j)=>\`<div class="op"\${j}></div>\`).join('');
+  });
+  d.forEach((s,i)=>{
+    if(s.opsi) document.querySelectorAll('#o'+i+' .op').forEach((el,j)=>{ el.textContent = String.fromCharCode(65+j)+'. '+s.opsi[j]; });
   });
   if(window.renderMathInElement) renderMathInElement(el,{delimiters:[
     {left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
