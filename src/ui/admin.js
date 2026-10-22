@@ -31,9 +31,12 @@ const ADMIN_HTML = `<!doctype html>
  .tombol.merah{background:#dc2626;color:#fff}
  input,select{padding:.5rem;border:1px solid #cbd5e1;border-radius:8px}
  .kartu{background:#fff;border-radius:12px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+ .badge{font-size:.72rem;background:#e2e8f0;color:#334155;padding:.15rem .5rem;border-radius:6px;margin-left:.4rem}
  .ok{color:#16a34a}.red{color:#dc2626}
  #login{max-width:340px;margin:20vh auto}
-</style></head>
+</style>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script></head>
 <body>
 <div id="login" class="kartu" style="display:none">
   <h2>🔐 Login Admin</h2>
@@ -81,10 +84,36 @@ function buka(tab){ TAB=tab;
 async function paket(){
   const r = await fetch('/api/admin/paket'); const d = await r.json();
   $('#isi').innerHTML = \`<div class="kartu"><h3>Paket Soal (\${d.length})</h3>
-   <table><tr><th>ID</th><th>Judul</th><th>Durasi</th><th>Jumlah soal</th><th>Aktif</th></tr>
-   \${d.map(p=>\`<tr><td>\${p.id}</td><td>\${p.judul}</td><td>\${p.durasi_menit} m</td>
-     <td>\${p.jml}</td><td>\${p.aktif?'<span class=ok>✓</span>':'—'}</td></tr>\`).join('')}</table></div>\`;
+   <table><tr><th>ID</th><th>Judul</th><th>Durasi</th><th>Jumlah soal</th><th>Aktif</th><th></th></tr>
+   \${d.map(p=>\`<tr id="prow-\${p.id}"><td>\${p.id}</td><td>\${p.judul}</td><td>\${p.durasi_menit} m</td>
+     <td>\${p.jml}</td><td id="paktif-\${p.id}">\${p.aktif?'<span class=ok>✓ aktif</span>':'—'}</td>
+     <td><button class="tombol" onclick="pratinjau('\${p.id}')">Lihat soal</button>
+         <button class="tombol \${p.aktif?'merah':'hijau'}" onclick="toggleAktif('\${p.id}',\${p.aktif?1:0})">\${p.aktif?'Nonaktifkan':'Aktifkan'}</button></td></tr>\`).join('')}</table></div>
+   <div id="pratinjau"></div>\`;
 }
+window.pratinjau = async (pid)=>{
+  const r = await fetch('/api/admin/soal?paket='+pid); const d = await r.json();
+  const el = document.getElementById('pratinjau');
+  el.innerHTML = \`<div class="kartu"><h3>Pratinjau: \${pid} (\${d.length} soal)</h3>\${d.map((s,i)=>
+    \`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:.8rem;margin:.6rem 0">
+      <b>Soal \${i+1}</b> <span class="badge">\${s.tipe} · bobot \${s.bobot} · \${s.penilaian}</span>
+      <div class="teks" id="t\${i}"></div>
+      \${s.gambar?\`<img src="\${s.gambar}" style="max-width:60%;border-radius:6px;display:block;margin:.4rem 0">\`:''}
+      <div class="opsiw" id="o\${i}"></div>
+      <div style="font-size:.85rem;color:#16a34a;margin-top:.4rem">Kunci: \${s.kunci_tampil}</div>
+    </div>\`).join('')}</div>\`;
+  d.forEach((s,i)=>{
+    document.getElementById('t'+i).innerHTML = s.teks;
+    document.getElementById('o'+i).innerHTML = s.opsi ? s.opsi.map((o,j)=>\`<div>\${String.fromCharCode(65+j)}. \${o}</div>\`).join('') : (s.tipe==='bs'?'Benar / Salah':'');
+  });
+  if(window.renderMathInElement) renderMathInElement(el,{delimiters:[
+    {left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+};
+window.toggleAktif = async (pid, aktif)=>{
+  await fetch('/api/admin/aktifkan',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({paket:pid, aktif: !aktif})});
+  paket();
+};
 
 /* ---- TOKEN ---- */
 async function token(){
@@ -188,6 +217,36 @@ export async function renderAdmin(request, env, path) {
       `SELECT p.*, (SELECT COUNT(*) FROM soal s WHERE s.paket_id=p.id) AS jml FROM paket p ORDER BY p.id`
     ).all();
     return json(d.results);
+  }
+
+  // ---- pratinjau soal satu paket
+  if (path === "/api/admin/soal") {
+    const pid = url.searchParams.get("paket");
+    const d = await env.DB.prepare(
+      `SELECT tipe, teks, gambar, opsi, kunci, bobot, penilaian FROM soal WHERE paket_id=? ORDER BY urutan`
+    ).bind(pid).all();
+    const tampil = d.results.map((s) => {
+      let kunciTampil = "-";
+      try {
+        const k = JSON.parse(s.kunci);
+        if (s.tipe === "bs") kunciTampil = k[0] === true ? "Benar" : "Salah";
+        else if (s.opsi) {
+          const opsiArr = JSON.parse(s.opsi);
+          kunciTampil = k.map((idx) => String.fromCharCode(65 + Number(idx))).join(", ");
+        } else kunciTampil = JSON.stringify(k);
+      } catch {}
+      return { ...s, opsi: s.opsi ? JSON.parse(s.opsi) : null, kunci_tampil: kunciTampil };
+    });
+    return json(tampil);
+  }
+
+  // ---- aktifkan / nonaktifkan paket
+  if (path === "/api/admin/aktifkan" && request.method === "POST") {
+    const { paket, aktif } = await request.json();
+    await env.DB.prepare(`UPDATE paket SET aktif=? WHERE id=?`)
+      .bind(aktif ? 1 : 0, paket)
+      .run();
+    return json({ ok: true });
   }
 
   // ---- token
