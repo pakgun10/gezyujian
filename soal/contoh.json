@@ -1,0 +1,46 @@
+{
+  "paket": "contoh-matematika-viii",
+  "judul": "Contoh Paket — Persamaan Garis Lurus (Kelas VIII)",
+  "durasi_menit": 45,
+  "acak_soal": true,
+  "acak_opsi": true,
+  "soal": [
+    {
+      "tipe": "pg",
+      "teks": "Gradien garis yang melalui titik $A(2, 5)$ dan $B(-3, 0)$ adalah ...",
+      "gambar": null,
+      "bobot": 1,
+      "opsi": ["$1$", "$-1$", "$\\frac{1}{5}$", "$5$"],
+      "kunci": 0
+    },
+    {
+      "tipe": "pg",
+      "teks": "Perhatikan gambar berikut.",
+      "gambar": "https://tes.gezytech.web.id/gambar/contoh-koordinat.png",
+      "bobot": 2,
+      "opsi": ["$y = 2x + 1$", "$y = x + 2$", "$y = 2x - 1$", "$y = \\frac{1}{2}x + 1$"],
+      "kunci": 0
+    },
+    {
+      "tipe": "bs",
+      "teks": "Garis $y = -x$ tegak lurus dengan garis $y = x$.",
+      "bobot": 1,
+      "kunci": true
+    },
+    {
+      "tipe": "multi",
+      "teks": "Pilih semua bilangan yang merupakan bilangan prima.",
+      "bobot": 3,
+      "penilaian": "parsial",
+      "opsi": ["2", "9", "11", "15", "17"],
+      "kunci": [0, 2, 4]
+    },
+    {
+      "tipe": "pg",
+      "teks": "Sebuah garis melalui titik $(0, 3)$ dan bergradien $-2$. Persamaan garisnya adalah ...",
+      "bobot": 1,
+      "opsi": ["$y = -2x + 3$", "$y = 2x + 3$", "$y = -2x - 3$", "$y = 3x - 2$"],
+      "kunci": 0
+    }
+  ]
+}

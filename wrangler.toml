@@ -1,0 +1,24 @@
+name = "gezyujian"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+account_id = ""              # diisi saat `wrangler login`
+workers_dev = false
+
+# Rute custom (setelah zona gezytech.web.id terhubung ke akun Cloudflare)
+routes = [
+  { pattern = "tes.gezytech.web.id", custom_domain = true }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gezyujian"
+database_id = ""             # diisi dari output `wrangler d1 create gezyujian`
+
+[vars]
+APP_NAME = "GezyUjian"
+SINKRON_REPO = "pakgun10/gezyujian"
+SINKRON_FOLDER = "soal"
+
+# Secret (jangan di-commit): ADMIN_TOKEN, GITHUB_READ_TOKEN (opsional, utk repo private)
+# wrangler secret put ADMIN_TOKEN
+# wrangler secret put GITHUB_READ_TOKEN
