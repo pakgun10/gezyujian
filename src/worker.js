@@ -59,24 +59,39 @@ export default {
     // ---------- API ----------
     if (path === "/api/login" && request.method === "POST") {
       const { token, nama, kelas, sekolah } = await request.json();
+      const kode = (token || "").trim().toUpperCase();
       const t = await env.DB.prepare(
-        `SELECT t.kode, t.status, p.id AS paket_id, p.durasi_menit, p.aktif
+        `SELECT t.kode, t.mode, t.kuota, t.status, p.id AS paket_id, p.durasi_menit, p.aktif
          FROM token t JOIN paket p ON p.id = t.paket_id WHERE t.kode = ?`
       )
-        .bind((token || "").trim().toUpperCase())
+        .bind(kode)
         .first();
-      if (!t || t.status !== "aktif" || !t.aktif)
-        return json({ ok: false, pesan: "Token tidak valid atau sudah terpakai." }, 403);
+      if (!t || !t.aktif || t.status === "nonaktif")
+        return json({ ok: false, pesan: "Token tidak valid atau dinonaktifkan." }, 403);
 
-      // cek attempt jalan sebelumnya (lanjut test)
-      const lanjut = await env.DB.prepare(
-        `SELECT a.id FROM attempt a JOIN peserta s ON s.id = a.peserta_id
-         WHERE s.token_kode = ? AND a.status = 'jalan'`
-      )
-        .bind(t.kode)
-        .first();
-
-      if (lanjut) return json({ ok: true, lanjut: true, attempt_id: lanjut.id });
+      if (t.mode === "per-orang") {
+        // lanjut test (refresh halaman)
+        const lanjut = await env.DB.prepare(
+          `SELECT a.id FROM attempt a JOIN peserta s ON s.id = a.peserta_id
+           WHERE s.token_kode = ? AND a.status = 'jalan'`
+        )
+          .bind(t.kode)
+          .first();
+        if (lanjut) return json({ ok: true, lanjut: true, attempt_id: lanjut.id });
+        if (t.status === "terpakai")
+          return json({ ok: false, pesan: "Token sudah terpakai peserta lain." }, 403);
+      } else {
+        // mode bersama: cek kuota (jumlah peserta yang sudah mendaftar dgn token ini)
+        if (t.kuota != null) {
+          const n = await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM peserta WHERE token_kode = ?`
+          )
+            .bind(t.kode)
+            .first();
+          if (n.n >= t.kuota)
+            return json({ ok: false, pesan: "Kuota token sudah penuh." }, 403);
+        }
+      }
 
       // buat attempt baru
       const soalRows = await env.DB.prepare(
@@ -107,9 +122,11 @@ export default {
       )
         .bind(insP.meta.last_row_id, t.paket_id, JSON.stringify(urutan), deadline)
         .run();
-      await env.DB.prepare(`UPDATE token SET status='terpakai', dipakai_at=? WHERE kode=?`)
-        .bind(mulai, t.kode)
-        .run();
+      if (t.mode === "per-orang") {
+        await env.DB.prepare(`UPDATE token SET status='terpakai', dipakai_at=? WHERE kode=?`)
+          .bind(mulai, t.kode)
+          .run();
+      }
       return json({ ok: true, attempt_id: insA.meta.last_row_id, deadline });
     }
 

@@ -28,9 +28,11 @@ CREATE TABLE IF NOT EXISTS soal (
 CREATE TABLE IF NOT EXISTS token (
   kode TEXT PRIMARY KEY,           -- 5-10 alnum
   paket_id TEXT NOT NULL REFERENCES paket(id),
+  mode TEXT NOT NULL DEFAULT 'per-orang' CHECK (mode IN ('per-orang','bersama')),
+  kuota INTEGER,                   -- utk mode bersama: max peserta (null = tanpa batas)
   status TEXT NOT NULL DEFAULT 'aktif' CHECK (status IN ('aktif','terpakai','nonaktif')),
   dibuat_at TEXT NOT NULL,
-  dipakai_at TEXT
+  dipakai_at TEXT                  -- utk per-orang: waktu dipakai pertama
 );
 
 CREATE TABLE IF NOT EXISTS peserta (

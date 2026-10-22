@@ -94,18 +94,24 @@ async function token(){
   <div class="kartu"><h3>Generate Token</h3>
    Paket <select id="tp">\${paketOpts}</select>
    Jumlah <input id="jn" type="number" value="10" min="1" max="200" style="width:70px">
+   Mode <select id="tm" onchange="document.getElementById('kq').style.display=this.value==='bersama'?'inline':'none'">
+     <option value="per-orang">per orang (1x pakai)</option>
+     <option value="bersama">bersama (banyak peserta)</option></select>
+   <span id="kq" style="display:none">Kuota <input id="tk" type="number" value="32" min="1" style="width:60px" placeholder="kosong=tanpa batas"></span>
    <button class="tombol" onclick="genTok()">Generate</button>
    <span id="gmsg" class="ok"></span></div>
   <div class="kartu"><h3>Daftar Token (\${d.token.length})</h3>
-   <table><tr><th>Kode</th><th>Paket</th><th>Status</th><th>Dipakai</th></tr>
+   <table><tr><th>Kode</th><th>Paket</th><th>Mode</th><th>Kuota</th><th>Status</th><th>Dipakai</th></tr>
    \${d.token.map(t=>\`<tr><td><b>\${t.kode}</b></td><td>\${t.paket_id}</td>
+     <td>\${t.mode||'per-orang'}</td><td>\${t.kuota??'—'}</td>
      <td>\${t.status==='aktif'?'<span class=ok>aktif</span>':(t.status==='terpakai'?'<span class=red>terpakai</span>':'nonaktif')}</td>
      <td>\${t.dipakai_at||'—'}</td></tr>\`).join('')}</table></div>\`;
 }
 window.genTok = async ()=>{
   const r = await fetch('/api/admin/token',{method:'POST',
     headers:{'content-type':'application/json'},
-    body:JSON.stringify({paket:$('#tp').value, jumlah:Number($('#jn').value)})});
+    body:JSON.stringify({paket:$('#tp').value, jumlah:Number($('#jn').value),
+      mode:$('#tm').value, kuota:Number($('#tk')?.value)||null})});
   const d = await r.json();
   $('#gmsg').textContent = d.ok? \`\${d.dibuat} token dibuat\` : 'gagal';
   token();
@@ -191,7 +197,7 @@ export async function renderAdmin(request, env, path) {
     return json({ token: tokens.results, paket: paket.results });
   }
   if (path === "/api/admin/token" && request.method === "POST") {
-    const { paket, jumlah } = await request.json();
+    const { paket, jumlah, mode, kuota } = await request.json();
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let dibuat = 0;
     for (let i = 0; i < Math.min(jumlah || 1, 200); i++) {
@@ -201,8 +207,11 @@ export async function renderAdmin(request, env, path) {
         const ada = await env.DB.prepare(`SELECT 1 FROM token WHERE kode=?`).bind(kode).first();
         if (!ada) break;
       } while (true);
-      await env.DB.prepare(`INSERT INTO token (kode, paket_id, dibuat_at) VALUES (?,?,?)`)
-        .bind(kode, paket, nowISO())
+      await env.DB.prepare(
+        `INSERT INTO token (kode, paket_id, mode, kuota, dibuat_at) VALUES (?,?,?,?,?)`
+      )
+        .bind(kode, paket, mode === "bersama" ? "bersama" : "per-orang",
+              mode === "bersama" && kuota ? Number(kuota) : null, nowISO())
         .run();
       dibuat++;
     }
