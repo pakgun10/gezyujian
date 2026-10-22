@@ -12,7 +12,7 @@ routes = [
 [[d1_databases]]
 binding = "DB"
 database_name = "gezyujian"
-database_id = ""             # diisi dari output `wrangler d1 create gezyujian`
+database_id = "1d82021c-2d1a-4f3e-99e8-03a0b088a3bb"
 
 [vars]
 APP_NAME = "GezyUjian"
